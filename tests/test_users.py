@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 import pytest
 from fastapi.testclient import TestClient
 
-from app.dependencies import get_moxfield_client
+from app.dependencies import get_mongo_database, get_moxfield_client
 from app.main import create_app
 from app.moxfield import MoxfieldError, MoxfieldNotFoundError
 
@@ -58,10 +58,39 @@ class _StubMoxfieldClient:
         return self._deck_summaries
 
 
+class _StubCollection:
+    """Capture update operations without touching a real database."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+
+    async def update_one(self, *args: Any, **kwargs: Any) -> None:
+        self.calls.append((args, kwargs))
+
+
+class _StubDatabase:
+    """Dictionary-like helper that returns stub collections."""
+
+    def __init__(self) -> None:
+        self._collections = {
+            "users": _StubCollection(),
+            "decks": _StubCollection(),
+            "deck_summaries": _StubCollection(),
+        }
+
+    def __getitem__(self, name: str) -> _StubCollection:
+        if name not in self._collections:
+            self._collections[name] = _StubCollection()
+        return self._collections[name]
+
+
 @pytest.fixture()
 def api_client() -> TestClient:
     """Provide a FastAPI TestClient with dependency overrides reset after use."""
     app = create_app()
+    stub_db = _StubDatabase()
+    app.dependency_overrides[get_mongo_database] = lambda: stub_db
+    app.state.stub_db = stub_db
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()

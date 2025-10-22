@@ -1,4 +1,4 @@
-.PHONY: install run test openapi
+.PHONY: install run test openapi mongo-up mongo-down mongo-logs
 
 install:
 	python3 -m venv .venv
@@ -13,3 +13,12 @@ test:
 
 openapi:
 	./.venv/bin/python scripts/generate_openapi.py
+
+mongo-up:
+	docker compose up -d mongodb
+
+mongo-down:
+	docker compose down
+
+mongo-logs:
+	docker compose logs -f mongodb

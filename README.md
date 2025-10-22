@@ -14,6 +14,32 @@ Launch the API server locally:
 make run
 ```
 
+## MongoDB persistence
+
+The API now stores fetched decks and summaries in MongoDB so repeated requests can build on previously synced data.
+
+1. Copy the sample environment file and adjust the connection string if needed:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Start a local MongoDB instance with Docker:
+
+   ```bash
+   make mongo-up
+   ```
+
+   This uses the provided `docker-compose.yml` file and exposes MongoDB on `mongodb://localhost:27017`.
+
+3. Export the variables defined in `.env` (for example, `export $(grep -v '^#' .env | xargs)` in bash) before launching the API server. Each call to `/users/{username}/decks` or `/users/{username}/deck-summaries` upserts the user and their deck data into MongoDB.
+
+Stop the database when you're done:
+
+```bash
+make mongo-down
+```
+
 The primary endpoint returns the target user, every public deck, and each deck's full card list:
 
 ```
